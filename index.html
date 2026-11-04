@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Квітковий Годинник Ліннея • 3D</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  body {
+    background: linear-gradient(to bottom, #87CEEB, #B0E0E6);
+    transition: background 2s ease;
+  }
+
+  #canvas-container {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* ===== Бічна панель ===== */
+  #sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 340px;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+    padding: 24px;
+    overflow-y: auto;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    color: #2c3e50;
+    margin-bottom: 4px;
+  }
+  .header .subtitle {
+    font-size: 13px;
+    color: #7f8c8d;
+    font-style: italic;
+  }
+
+  /* ===== Годинник ===== */
+  .clock-display {
+    background: linear-gradient(135deg, #ff6b9d, #c44569);
+    color: white;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3);
+  }
+  .clock-display .time {
+    font-size: 32px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+  }
+  .clock-display .date {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+  .clock-display .state {
+    font-size: 14px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 500;
+  }
+
+  /* ===== Секції ===== */
+  .modes h3, .info-section h3, .team-section h3, .legend h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #95a5a6;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  /* ===== Кнопки режимів ===== */
+  .mode-btn {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #ecf0f1;
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #2c3e50;
+    transition: all 0.2s ease;
+    margin-bottom: 8px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: inherit;
+  }
+  .mode-btn:hover {
+    border-color: #ff6b9d;
+    background: #fff5f8;
+    transform: translateY(-1px);
+  }
+  .mode-btn.active {
+    border-color: #ff6b9d;
+    background: linear-gradient(135deg, #ff6b9d, #c44569);
+    color: white;
+    box-shadow: 0 4px 14px rgba(255, 107, 157, 0.35);
+  }
+  .mode-btn .icon { font-size: 22px; }
+  .mode-btn .label { font-size: 14px; font-weight: 600; }
+
+  /* ===== Інфо ===== */
+  .info-section {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #ecf0f1;
+  }
+  .info-row:last-of-type { border-bottom: none; }
+  .info-row .label { color: #7f8c8d; }
+  .info-row .value { font-weight: 600; color: #2c3e50; }
+
+  .bloom-bar-container { margin-top: 12px; }
+  .bloom-bar {
+    width: 100%;
+    height: 8px;
+    background: #ecf0f1;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bloom-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff6b9d, #f39c12);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  /* ===== Команда ===== */
+  .team-section .member {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    border: 1px solid #ecf0f1;
+    transition: all 0.2s ease;
+  }
+  .team-section .member:hover {
+    transform: translateX(-4px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    border-color: #ff6b9d;
+  }
+  .team-section .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  }
+  .team-section .member-info .name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #2c3e50;
+  }
+  .team-section .member-info .role {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+
+  /* ===== Простий текст внизу ===== */
+  .note-text {
+    font-size: 13px;
+    color: #5d6d7e;
+    line-height: 1.6;
+    padding: 0 4px;
+    text-align: center;
+  }
+
+  /* ===== Скролбар ===== */
+  #sidebar::-webkit-scrollbar { width: 6px; }
+  #sidebar::-webkit-scrollbar-thumb { background: #d0d3d4; border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    #sidebar { width: 100%; height: 55vh; bottom: 0; top: auto; }
+    #canvas-container { height: 45vh; }
+  }
+</style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <aside id="sidebar">
+    <div class="header">
+      <h1>🌸 Квітковий Годинник</h1>
+      <div class="subtitle">Годинник Ліннея • 3D-візуалізація</div>
+    </div>
+
+    <div class="clock-display">
+      <div class="time" id="clock">00:00:00</div>
+      <div class="date" id="date">—</div>
+      <div class="state" id="state">—</div>
+    </div>
+
+    <div class="modes">
+      <h3>Режим часу</h3>
+      <button class="mode-btn active" data-mode="real">
+        <span class="icon">☀️</span>
+        <div class="label">Реальний час</div>
+      </button>
+      <button class="mode-btn" data-mode="minute">
+        <span class="icon">⏱️</span>
+        <div class="label">Хвилинний цикл</div>
+      </button>
+    </div>
+
+    <div class="info-section">
+      <h3>Стан квітки</h3>
+      <div class="info-row">
+        <span class="label">Фаза:</span>
+        <span class="value" id="phase">—</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Відкритість:</span>
+        <span class="value" id="openPct">0%</span>
+      </div>
+      <div class="bloom-bar-container">
+        <div class="bloom-bar"><div class="bloom-bar-fill" id="bloomBar" style="width: 0%"></div></div>
+      </div>
+    </div>
+
+    <div class="team-section">
+      <h3>Це наша команда</h3>
+      <div class="member">
+        <div class="avatar" style="background: linear-gradient(135deg, #ff6b9d, #c44569);">М</div>
+        <div class="member-info">
+          <div class="name">Марк</div>
+        </div>
+      </div>
+      <div class="member">
+        <div class="avatar" style="background: linear-gradient(135deg, #f9ca24, #f0932b);">С</div>
+        <div class="member-info">
+          <div class="name">Саша</div>
+        </div>
+      </div>
+      <div class="member">
+        <div class="avatar" style="background: linear-gradient(135deg, #6ab04c, #26de81);">І</div>
+        <div class="member-info">
+          <div class="name">Інга</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note-text">Квітка розквітає вранці та закривається ввечері — як справжня квітка у годиннику Ліннея.</p>
+  </aside>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // =========================================================
+    //  СЦЕНА THREE.JS
+    // =========================================================
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 3.5, 9);
+    camera.lookAt(0, 2.5, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    // =========================================================
+    //  ОСВІТЛЕННЯ
+    // =========================================================
+    const ambient = new THREE.AmbientLight(0xffffff, 0.65);
+    scene.add(ambient);
+
+    const sunLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+    sunLight.position.set(5, 12, 6);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(1024, 1024);
+    sunLight.shadow.camera.left = -10;
+    sunLight.shadow.camera.right = 10;
+    sunLight.shadow.camera.top = 10;
+    sunLight.shadow.camera.bottom = -10;
+    scene.add(sunLight);
+
+    const fillLight = new THREE.DirectionalLight(0xa0c0ff, 0.35);
+    fillLight.position.set(-5, 5, -5);
+    scene.add(fillLight);
+
+    // =========================================================
+    //  ЗЕМЛЯ (трав'яний круг)
+    // =========================================================
+    const groundGeo = new THREE.CircleGeometry(25, 64);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x4a7c3e });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // =========================================================
+    //  КВІТКА — модель на основі справжньої квітки годинника Ліннея
+    // =========================================================
+    const flower = new THREE.Group();
+    scene.add(flower);
+
+    // --- Стебло ---
+    const stemGeo = new THREE.CylinderGeometry(0.06, 0.09, 3.2, 16);
+    const stemMat = new THREE.MeshLambertMaterial({ color: 0x2d5e1f });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.y = 1.6;
+    stem.castShadow = true;
+    flower.add(stem);
+
+    // --- Листя ---
+    function createLeaf(angleY, height, scale = 1) {
+      const leafGeo = new THREE.SphereGeometry(0.55, 20, 12);
+      leafGeo.scale(1, 0.12, 0.55);
+      const leafMat = new THREE.MeshLambertMaterial({
+        color: 0x4a7c3e,
+        side: THREE.DoubleSide
+      });
+      const leaf = new THREE.Mesh(leafGeo, leafMat);
+      leaf.position.set(Math.sin(angleY) * 0.45, height, Math.cos(angleY) * 0.45);
+      leaf.rotation.y = angleY;
+      leaf.rotation.z = -Math.PI / 2 + 0.45;
+      leaf.scale.setScalar(scale);
+      leaf.castShadow = true;
+      return leaf;
+    }
+    flower.add(createLeaf(Math.PI / 4, 0.8, 1.0));
+    flower.add(createLeaf(-Math.PI / 3, 1.5, 0.85));
+    flower.add(createLeaf(Math.PI * 0.9, 0.5, 0.7));
+
+    // --- Головка квітки (центр + пелюстки) ---
+    const flowerHead = new THREE.Group();
+    flowerHead.position.y = 3.2;
+    flower.add(flowerHead);
+
+    // Центр (приймочка)
+    const centerGeo = new THREE.SphereGeometry(0.30, 24, 18);
+    const centerMat = new THREE.MeshPhongMaterial({
+      color: 0xd35400,
+      shininess: 30
+    });
+    const center = new THREE.Mesh(centerGeo, centerMat);
+    center.castShadow = true;
+    flowerHead.add(center);
+
+    // Тичинки (маленькі жовті крапки)
+    const stamenGroup = new THREE.Group();
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2;
+      const r = 0.18;
+      const stamenGeo = new THREE.SphereGeometry(0.04, 8, 8);
+      const stamenMat = new THREE.MeshPhongMaterial({
+        color: 0xf1c40f,
+        shininess: 80
+      });
+      const stamen = new THREE.Mesh(stamenGeo, stamenMat);
+      stamen.position.set(Math.sin(angle) * r, 0.20, Math.cos(angle) * r);
+      stamenGroup.add(stamen);
+    }
+    flowerHead.add(stamenGroup);
+
+    // --- Пелюстки ---
+    const petals = [];
+    const petalCount = 12;
+
+    function createPetal(index) {
+      // Форма пелюстки через криві Безьє (виглядає як справжня пелюстка)
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.bezierCurveTo(0.4, 0.15, 0.55, 0.9, 0.05, 1.6);
+      shape.bezierCurveTo(-0.55, 0.9, -0.4, 0.15, 0, 0);
+
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.05,
+        bevelEnabled: true,
+        bevelThickness: 0.025,
+        bevelSize: 0.03,
+        bevelSegments: 3
+      });
+      geo.translate(0, 0, -0.025); // центр на Z
+
+      const mat = new THREE.MeshPhongMaterial({
+        color: 0xff6b9d,
+        shininess: 40,
+        side: THREE.DoubleSide
+      });
+      const petal = new THREE.Mesh(geo, mat);
+
+      const angle = (index / petalCount) * Math.PI * 2;
+      // База пелюстки трохи зміщена від центру (радіус 0.25)
+      petal.position.set(Math.sin(angle) * 0.25, 0, Math.cos(angle) * 0.25);
+      petal.rotation.y = angle;
+      petal.castShadow = true;
+
+      flowerHead.add(petal);
+      return petal;
+    }
+
+    for (let i = 0; i < petalCount; i++) {
+      petals.push(createPetal(i));
+    }
+
+    // =========================================================
+    //  КЕРУВАННЯ СТАНОМ КВІТКИ
+    //  state: 0 (закрита, бутон) → 1 (повністю розквітла)
+    // =========================================================
+    function setBloom(state) {
+      // closedX: невеликий нахил всередину (бутон)
+      // openX: горизонтально + невеликий нахил вниз (розквітла)
+      const closedX = -0.10;
+      const openX = Math.PI / 2 + 0.12;
+
+      petals.forEach((petal, i) => {
+        // Невелика затримка для кожної пелюстки — ефект «хвилі»
+        const delay = (i / petals.length) * 0.05;
+        const s = Math.max(0, Math.min(1, (state - delay) / (1 - delay * 2)));
+        petal.rotation.x = closedX + (openX - closedX) * s;
+      });
+
+      // Центр трохи збільшується коли квітка відкрита
+      const cs = 0.75 + 0.25 * state;
+      center.scale.setScalar(cs);
+      stamenGroup.scale.setScalar(cs);
+    }
+
+    setBloom(1);
+
+    // =========================================================
+    //  ДВІ СИСТЕМИ ЧАСУ
+    // =========================================================
+    let currentMode = 'real';  // 'real' або 'minute'
+    let smoothState = 0;
+
+    function getBloomState() {
+      const now = new Date();
+
+      if (currentMode === 'real') {
+        // РЕАЛЬНИЙ ЧАС: відкривається о 6:00, повністю розквітла опівдні,
+        // закривається о 18:00, вночі — закрита.
+        const hours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+        const t = (hours - 6) / 12; // 0 о 6:00, 1 о 18:00
+        const clamped = Math.max(0, Math.min(1, t));
+        const state = Math.sin(clamped * Math.PI);
+        return Math.max(0, state);
+      } else {
+        // ХВИЛИННИЙ ЦИКЛ: 4 хв загалом → 2 хв розквіт, 2 хв закриття
+        const totalSec = now.getMinutes() * 60 + now.getSeconds();
+        const cycle = totalSec % 240;
+        if (cycle < 120) {
+          return cycle / 120;       // 0 → 1 (розквіт)
+        } else {
+          return 1 - (cycle - 120) / 120; // 1 → 0 (закриття)
+        }
+      }
+    }
+
+    function getPhaseText(state) {
+      if (currentMode === 'real') {
+        const h = new Date().getHours();
+        if (h >= 6 && h < 18) return '☀️ День';
+        if (h >= 5 && h < 6) return '🌅 Схід сонця';
+        if (h >= 18 && h < 20) return '🌆 Захід сонця';
+        return '🌙 Ніч';
+      } else {
+        if (state > 0.95) return '🌸 Розквітла';
+        if (state > 0.5) return '🌷 Розквітає';
+        if (state > 0.05) return '🍂 Закривається';
+        return '🌰 Закрита (бутон)';
+      }
+    }
+
+    function lerpColor(a, b, t) {
+      return [
+        Math.round(a[0] + (b[0] - a[0]) * t),
+        Math.round(a[1] + (b[1] - a[1]) * t),
+        Math.round(a[2] + (b[2] - a[2]) * t)
+      ];
+    }
+
+    function getBackgroundColors() {
+      if (currentMode === 'real') {
+        const hour = new Date().getHours() + new Date().getMinutes() / 60;
+        if (hour >= 5 && hour < 7)  return ['#FF9A8B', '#FFC7A0']; // схід
+        if (hour >= 7 && hour < 17) return ['#87CEEB', '#B0E0E6']; // день
+        if (hour >= 17 && hour < 20) return ['#FF6B6B', '#FFB07A']; // захід
+        return ['#0F0E2E', '#1A1A3E'];                              // ніч
+      } else {
+        const s = smoothState;
+        const top = lerpColor([26, 26, 62],  [135, 206, 235], s);
+        const bot = lerpColor([15, 14, 46],  [176, 224, 230], s);
+        return [`rgb(${top[0]},${top[1]},${top[2]})`, `rgb(${bot[0]},${bot[1]},${bot[2]})`];
+      }
+    }
+
+    // =========================================================
+    //  ОНОВЛЕННЯ UI
+    // =========================================================
+    function updateUI() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+
+      const days = ['Неділя','Понеділок','Вівторок','Середа','Четвер','П\'ятниця','Субота'];
+      const months = ['січ','лют','бер','квіт','трав','чер','лип','сер','вер','жовт','лист','груд'];
+      document.getElementById('date').textContent =
+        `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+
+      const statePct = Math.round(smoothState * 100);
+      const stateText =
+        smoothState > 0.95 ? '🌸 Повністю розквітла' :
+        smoothState < 0.05 ? '🌰 Закрита (бутон)' :
+        smoothState > 0.5  ? '🌷 Розквітає' :
+                             '🍂 Закривається';
+      document.getElementById('state').textContent = stateText;
+      document.getElementById('phase').textContent = getPhaseText(smoothState);
+      document.getElementById('openPct').textContent = `${statePct}%`;
+      document.getElementById('bloomBar').style.width = `${statePct}%`;
+
+      const [top, bot] = getBackgroundColors();
+      document.body.style.background = `linear-gradient(to bottom, ${top}, ${bot})`;
+    }
+
+    // =========================================================
+    //  МИША — нахил квітки для огляду (без обертання вбік)
+    // =========================================================
+    const canvasContainer = document.getElementById('canvas-container');
+    canvasContainer.style.cursor = 'grab';
+
+    let isDragging = false;
+    let lastPointerX = 0, lastPointerY = 0;
+    let targetTiltX = 0;     // нахил вперед/назад (огляд)
+    let targetTiltZ = 0;     // нахил вбік (огляд)
+    let currentTiltX = 0;
+    let currentTiltZ = 0;
+
+    function startDrag(x, y) {
+      isDragging = true;
+      lastPointerX = x;
+      lastPointerY = y;
+      canvasContainer.style.cursor = 'grabbing';
+    }
+    function moveDrag(x, y) {
+      if (!isDragging) return;
+      const dx = x - lastPointerX;
+      const dy = y - lastPointerY;
+      // Нахил по вертикалі (огляд зверху/знизу)
+      targetTiltX = Math.max(-0.5, Math.min(0.5, targetTiltX + dy * 0.006));
+      // Нахил по горизонталі (огляд збоку) — без обертання!
+      targetTiltZ = Math.max(-0.5, Math.min(0.5, targetTiltZ + dx * 0.006));
+      lastPointerX = x;
+      lastPointerY = y;
+    }
+    function endDrag() {
+      isDragging = false;
+      canvasContainer.style.cursor = 'grab';
+    }
+
+    // Mouse
+    canvasContainer.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+    window.addEventListener('mouseup', endDrag);
+    // Touch
+    canvasContainer.addEventListener('touchstart', (e) => {
+      if (e.touches.length) startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length) moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener('touchend', endDrag);
+    window.addEventListener('mouseleave', endDrag);
+
+    // =========================================================
+    //  КНОПКИ РЕЖИМІВ
+    // =========================================================
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+      });
+    });
+
+    // =========================================================
+    //  RESIZE
+    // =========================================================
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // =========================================================
+    //  АНІМАЦІЙНИЙ ЦИКЛ
+    // =========================================================
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Цільовий стан
+      const targetState = getBloomState();
+      // Плавна інтерполяція для приємного переходу
+      smoothState += (targetState - smoothState) * 0.05;
+
+      setBloom(smoothState);
+
+      // --- Нахил квітки для огляду (без обертання вбік) ---
+      currentTiltX += (targetTiltX - currentTiltX) * 0.15;
+      currentTiltZ += (targetTiltZ - currentTiltZ) * 0.15;
+
+      // Легке природне погойдування + нахил користувача
+      const t = performance.now() * 0.001;
+      flower.rotation.x = currentTiltX + Math.sin(t * 0.6) * 0.04;
+      flower.rotation.z = currentTiltZ + Math.sin(t * 0.4) * 0.02;
+      flower.rotation.y = 0;  // квітка не крутиться вбік
+
+      // Камера фіксована
+      camera.position.set(0, 3.5, 9);
+      camera.lookAt(0, 2.5, 0);
+
+      updateUI();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
